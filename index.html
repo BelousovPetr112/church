@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет посещаемости</title>
+    <title>Учет посещаемости духовенства</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; background: #f4f4f9; color: #333; }
         h1, h2 { text-align: center; color: #4a4a4a; }
@@ -12,44 +12,52 @@
         button:disabled { background: #95a5a6; cursor: not-allowed; }
         .hidden { display: none; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .list-item { display: block; width: 100%; text-align: left; background: #fff; color: #333; border: 1px solid #ccc; font-size: 16px; margin-bottom: 8px; }
+        .list-item { display: block; width: 100%; text-align: left; background: #fff; color: #333; border: 1px solid #ccc; font-size: 16px; margin-bottom: 8px; font-weight: bold; }
         .list-item:hover { background: #eaeaea; }
         .back-btn { background: #7f8c8d; }
         .back-btn:hover { background: #616a6b; }
         .save-btn { background: #2ecc71; }
         .save-btn:hover { background: #27ae60; }
+        .delete-btn { background: #e74c3c; padding: 6px 10px; font-size: 12px; }
+        .delete-btn:hover { background: #c0392b; }
         .view-btn { background: #9b59b6; display: block; width: 100%; margin: 20px 0; font-size: 16px; }
         .view-btn:hover { background: #8e44ad; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
         th { background: #34495e; color: white; }
         tr:nth-child(even) { background: #f9f9f9; }
-        input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
         .radio-group { margin: 15px 0; font-size: 16px; }
         .radio-group label { margin-right: 20px; cursor: pointer; }
         .loader { text-align: center; color: #e67e22; font-weight: bold; margin: 10px 0; }
+        .cat-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media(min-width: 480px) { .cat-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
 <body>
 
     <!-- Главная страница -->
     <div id="screen-main" class="card">
-        <h1>Список людей</h1>
+        <h1>Список духовенства</h1>
         <div id="people-list"></div>
-        <button class="view-btn" onclick="showScreen('table')">📊 Посмотреть таблицу данных</button>
+        <button class="view-btn" onclick="showScreen('table')">📊 Посмотреть общую таблицу данных</button>
     </div>
 
     <!-- Выбор категории -->
     <div id="screen-category" class="card hidden">
         <h2 id="current-person-title"></h2>
-        <button onclick="selectCategory('Обед')">🍽️ Отметить обед</button>
-        <button onclick="selectCategory('Молебен')">⛪ Отметить молебен</button>
-        <button onclick="selectCategory('Мероприятие')">🎉 Участие в мероприятии</button>
-        <br><br>
-        <button class="back-btn" onclick="showScreen('main')">⬅️ Назад к списку</button>
+        <div class="cat-grid">
+            <button onclick="selectCategory('Обед')">🍽️ Отметить обед</button>
+            <button onclick="selectCategory('Молебен')">⛪ Отметить молебен</button>
+            <button onclick="selectCategory('Служба')">🛡️ Отметить службу</button>
+            <button onclick="selectCategory('Требы')">📜 Ввести требы за неделю</button>
+            <button onclick="selectCategory('Мероприятие')">🎉 Участие в мероприятии</button>
+        </div>
+        <br>
+        <button class="back-btn" style="width: 100%;" onclick="showScreen('main')">⬅️ Назад к списку</button>
     </div>
 
-    <!-- Отметка Обеда / Молебна -->
+    <!-- Отметка Обеда / Молебна / Службы -->
     <div id="screen-attendance" class="card hidden">
         <h2 id="attendance-title"></h2>
         <div class="radio-group">
@@ -58,10 +66,22 @@
         </div>
         <div id="reason-block" class="hidden">
             <label>Укажите причину отсутствия:</label>
-            <input type="text" id="absence-reason" placeholder="Например: заболел, уехал">
+            <input type="text" id="absence-reason" placeholder="Например: болен, командировка">
         </div>
-        <div id="auth-loader-1" class="loader hidden">Сохранение в облако... пожалуйста, подождите</div>
+        <div id="auth-loader-1" class="loader hidden">Сохранение в облако... подождите</div>
         <button id="save-btn-1" class="save-btn" onclick="saveAttendance()">💾 Сохранить</button>
+        <button class="back-btn" onclick="showScreen('category')">Отмена</button>
+    </div>
+
+    <!-- Ввод Треб -->
+    <div id="screen-treby" class="card hidden">
+        <h2 id="treby-title"></h2>
+        <label>Количество треб за неделю:</label>
+        <input type="number" id="treby-count" min="0" placeholder="Введите число, например: 5">
+        <label>Дополнительный комментарий (необязательно):</label>
+        <input type="text" id="treby-comment" placeholder="Особенности или примечания">
+        <div id="auth-loader-3" class="loader hidden">Сохранение в облако... подождите</div>
+        <button id="save-btn-3" class="save-btn" onclick="saveTreby()">💾 Сохранить</button>
         <button class="back-btn" onclick="showScreen('category')">Отмена</button>
     </div>
 
@@ -71,17 +91,17 @@
         <label>Название мероприятия:</label>
         <input type="text" id="event-name" placeholder="Например: Субботник">
         <label>Что там делал:</label>
-        <input type="text" id="event-role" placeholder="Например: помогал убирать">
-        <div id="auth-loader-2" class="loader hidden">Сохранение в облако... пожалуйста, подождите</div>
+        <input type="text" id="event-role" placeholder="Например: сослужил, помогал">
+        <div id="auth-loader-2" class="loader hidden">Сохранение в облако... подождите</div>
         <button id="save-btn-2" class="save-btn" onclick="saveEvent()">💾 Сохранить</button>
         <button class="back-btn" onclick="showScreen('category')">Отмена</button>
     </div>
 
     <!-- Экран таблицы -->
     <div id="screen-table" class="card hidden">
-        <h2>Сводная таблица (из Google Sheets)</h2>
+        <h2>Сводная таблица записей</h2>
         <button class="back-btn" onclick="showScreen('main')">⬅️ Назад на главную</button>
-        <div id="table-loader" class="loader hidden">Загрузка актуальных данных...</div>
+        <div id="table-loader" class="loader hidden">Загрузка актуальных данных из Google Sheets...</div>
         <div style="overflow-x: auto; margin-top: 15px;">
             <table>
                 <thead>
@@ -89,8 +109,9 @@
                         <th>Дата</th>
                         <th>Имя</th>
                         <th>Тип</th>
-                        <th>Статус / Событие</th>
+                        <th>Статус / Кол-во</th>
                         <th>Причина / Роль</th>
+                        <th>Действие</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -99,10 +120,10 @@
     </div>
 
     <script>
-        // !!! ЗАМЕНИТЕ ЭТУ ССЫЛКУ НА СВОЮ ИЗ GOOGLE APPS SCRIPT !!!
+        // !!! ВСТАВЬТЕ ССЫЛКУ НА ВАШ GOOGLE APPS SCRIPT МЕЖДУ КАВЫЧКАМИ !!!
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx2c1yoKl7NGR4g65eoJ64C8qaaieK-GdTAwowWUVtF0JvfUkszYEjE8PMyXlXfBk63/exec";
 
-        // Список людей (можете вписать нужные имена прямо здесь)
+        // Актуальный список духовенства
         const people = [
             "Игумен ПАВЕЛ (Полуков)",
             "Архимандрит СИЛУАН (Пасенко)",
@@ -116,7 +137,7 @@
             "Иерей ВАДИМ Подзигун",
             "Диакон СЕРГИЙ Кульпинов",
             "Иеродиакон КОСМА (Сковорода)",
-            "Монах НИКИТА (Гашев)",
+            "Монах НИКИТА (Galашев)",
             "Инок ИОАНН (Толкачевас)"
         ];
 
@@ -143,12 +164,14 @@
             document.getElementById("screen-main").classList.add("hidden");
             document.getElementById("screen-category").classList.add("hidden");
             document.getElementById("screen-attendance").classList.add("hidden");
+            document.getElementById("screen-treby").classList.add("hidden");
             document.getElementById("screen-event").classList.add("hidden");
             document.getElementById("screen-table").classList.add("hidden");
 
             if(screenName === 'main') document.getElementById("screen-main").classList.remove("hidden");
             if(screenName === 'category') document.getElementById("screen-category").classList.remove("hidden");
             if(screenName === 'attendance') document.getElementById("screen-attendance").classList.remove("hidden");
+            if(screenName === 'treby') document.getElementById("screen-treby").classList.remove("hidden");
             if(screenName === 'event') document.getElementById("screen-event").classList.remove("hidden");
             if(screenName === 'table') {
                 document.getElementById("screen-table").classList.remove("hidden");
@@ -158,12 +181,17 @@
 
         function selectCategory(category) {
             currentCategory = category;
-            if (category === 'Обед' || category === 'Молебен') {
+            if (category === 'Обед' || category === 'Молебен' || category === 'Служба') {
                 document.getElementById("attendance-title").innerText = `${currentPerson} — ${category}`;
                 document.querySelector('input[name="status"][value="Был"]').checked = true;
                 toggleReason(false);
                 document.getElementById("absence-reason").value = "";
                 showScreen('attendance');
+            } else if (category === 'Требы') {
+                document.getElementById("treby-title").innerText = `${currentPerson} — Требы`;
+                document.getElementById("treby-count").value = "";
+                document.getElementById("treby-comment").value = "";
+                showScreen('treby');
             } else if (category === 'Мероприятие') {
                 document.getElementById("event-title").innerText = `${currentPerson} — Мероприятие`;
                 document.getElementById("event-name").value = "";
@@ -189,13 +217,13 @@
                 body: JSON.stringify(payload)
             })
             .then(() => {
-                alert("Данные успешно сохранены!");
+                alert("Данные успешно записаны!");
                 document.getElementById(loaderId).classList.add("hidden");
                 document.getElementById(btnId).disabled = false;
                 showScreen('main');
             })
             .catch(err => {
-                alert("Ошибка при сохранении: " + err);
+                alert("Ошибка сохранения: " + err);
                 document.getElementById(loaderId).classList.add("hidden");
                 document.getElementById(btnId).disabled = false;
             });
@@ -205,7 +233,6 @@
             const status = document.querySelector('input[name="status"]:checked').value;
             const reason = status === "Не был" ? document.getElementById("absence-reason").value : "-";
             const timestamp = new Date().toLocaleString("ru-RU");
-
             sendToGoogle({ 
                 timestamp, 
                 name: currentPerson, 
@@ -213,6 +240,23 @@
                 val1: status, 
                 val2: reason 
             }, "auth-loader-1", "save-btn-1");
+        }
+
+        function saveTreby() {
+            const count = document.getElementById("treby-count").value;
+            const comment = document.getElementById("treby-comment").value.trim();
+            if(!count) { 
+                alert("Укажите число треб!"); 
+                return; 
+            }
+            const timestamp = new Date().toLocaleString("ru-RU");
+            sendToGoogle({ 
+                timestamp, 
+                name: currentPerson, 
+                type: currentCategory, 
+                val1: count, 
+                val2: comment || "-" 
+            }, "auth-loader-3", "save-btn-3");
         }
 
         function saveEvent() {
@@ -243,25 +287,42 @@
                 .then(data => {
                     loader.classList.add("hidden");
                     if(!data || data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Данных в таблице пока нет</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Данных пока нет</td></tr>';
                         return;
                     }
                     data.reverse().forEach(item => {
                         const tr = document.createElement("tr");
                         tr.innerHTML = `
-                            <td>${item.timestamp}</td>
+                            <tr>${item.timestamp}</td>
                             <td><b>${item.name}</b></td>
                             <td>${item.type}</td>
                             <td>${item.val1}</td>
                             <td>${item.val2}</td>
+                            <td><button class="delete-btn" onclick="deleteRow('${item.rowId}')">❌ Удалить</button></td>
                         `;
                         tbody.appendChild(tr);
                     });
                 })
                 .catch(err => {
                     loader.classList.add("hidden");
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Ошибка загрузки: ${err}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Ошибка загрузки: ${err}</td></tr>`;
                 });
+        }
+
+        function deleteRow(rowId) {
+            if(confirm("Вы точно хотите удалить эту запись из Google Таблицы?")) {
+                const loader = document.getElementById("table-loader");
+                loader.classList.remove("hidden");
+                fetch(`${WEB_APP_URL}?rowId=${rowId}`, { method: "DELETE" })
+                    .then(() => {
+                        alert("Запись успешно удалена!");
+                        loadTableFromGoogle();
+                    })
+                    .catch(err => {
+                        alert("Ошибка при удалении: " + err);
+                        loader.classList.add("hidden");
+                    });
+            }
         }
 
         init();
