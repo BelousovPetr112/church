@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учет посещаемости</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; background: #f4f4f9; color: #333; }
+        h1, h2 { text-align: center; color: #4a4a4a; }
+        button { cursor: pointer; padding: 12px 18px; margin: 5px; border: none; border-radius: 4px; background: #3498db; color: white; font-size: 15px; }
+        button:hover { background: #2980b9; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
+        .hidden { display: none; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .list-item { display: block; width: 100%; text-align: left; background: #fff; color: #333; border: 1px solid #ccc; font-size: 16px; margin-bottom: 8px; }
+        .list-item:hover { background: #eaeaea; }
+        .back-btn { background: #7f8c8d; }
+        .back-btn:hover { background: #616a6b; }
+        .save-btn { background: #2ecc71; }
+        .save-btn:hover { background: #27ae60; }
+        .view-btn { background: #9b59b6; display: block; width: 100%; margin: 20px 0; font-size: 16px; }
+        .view-btn:hover { background: #8e44ad; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
+        th { background: #34495e; color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .radio-group { margin: 15px 0; font-size: 16px; }
+        .radio-group label { margin-right: 20px; cursor: pointer; }
+        .loader { text-align: center; color: #e67e22; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <!-- Главная страница -->
+    <div id="screen-main" class="card">
+        <h1>Список людей</h1>
+        <div id="people-list"></div>
+        <button class="view-btn" onclick="showScreen('table')">📊 Посмотреть таблицу данных</button>
+    </div>
+
+    <!-- Выбор категории -->
+    <div id="screen-category" class="card hidden">
+        <h2 id="current-person-title"></h2>
+        <button onclick="selectCategory('Обед')">🍽️ Отметить обед</button>
+        <button onclick="selectCategory('Молебен')">⛪ Отметить молебен</button>
+        <button onclick="selectCategory('Мероприятие')">🎉 Участие в мероприятии</button>
+        <br><br>
+        <button class="back-btn" onclick="showScreen('main')">⬅️ Назад к списку</button>
+    </div>
+
+    <!-- Отметка Обеда / Молебна -->
+    <div id="screen-attendance" class="card hidden">
+        <h2 id="attendance-title"></h2>
+        <div class="radio-group">
+            <label><input type="radio" name="status" value="Был" checked onclick="toggleReason(false)"> Был</label>
+            <label><input type="radio" name="status" value="Не был" onclick="toggleReason(true)"> Не был</label>
+        </div>
+        <div id="reason-block" class="hidden">
+            <label>Укажите причину отсутствия:</label>
+            <input type="text" id="absence-reason" placeholder="Например: заболел, уехал">
+        </div>
+        <div id="auth-loader-1" class="loader hidden">Сохранение в облако... пожалуйста, подождите</div>
+        <button id="save-btn-1" class="save-btn" onclick="saveAttendance()">💾 Сохранить</button>
+        <button class="back-btn" onclick="showScreen('category')">Отмена</button>
+    </div>
+
+    <!-- Отметка Мероприятия -->
+    <div id="screen-event" class="card hidden">
+        <h2 id="event-title"></h2>
+        <label>Название мероприятия:</label>
+        <input type="text" id="event-name" placeholder="Например: Субботник">
+        <label>Что там делал:</label>
+        <input type="text" id="event-role" placeholder="Например: помогал убирать">
+        <div id="auth-loader-2" class="loader hidden">Сохранение в облако... пожалуйста, подождите</div>
+        <button id="save-btn-2" class="save-btn" onclick="saveEvent()">💾 Сохранить</button>
+        <button class="back-btn" onclick="showScreen('category')">Отмена</button>
+    </div>
+
+    <!-- Экран таблицы -->
+    <div id="screen-table" class="card hidden">
+        <h2>Сводная таблица (из Google Sheets)</h2>
+        <button class="back-btn" onclick="showScreen('main')">⬅️ Назад на главную</button>
+        <div id="table-loader" class="loader hidden">Загрузка актуальных данных...</div>
+        <div style="overflow-x: auto; margin-top: 15px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Имя</th>
+                        <th>Тип</th>
+                        <th>Статус / Событие</th>
+                        <th>Причина / Роль</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // !!! ЗАМЕНИТЕ ЭТУ ССЫЛКУ НА СВОЮ ИЗ GOOGLE APPS SCRIPT !!!
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx2c1yoKl7NGR4g65eoJ64C8qaaieK-GdTAwowWUVtF0JvfUkszYEjE8PMyXlXfBk63/exec";
+
+        // Список людей (можете вписать нужные имена прямо здесь)
+        const people = [
+            "Иванов Иван", "Петров Петр", "Сидоров Сидор", 
+            "Смирнова Анна", "Кузнецов Олег", "Попова Елена", 
+            "Васильев Андрей", "Соколов Игорь", "Новикова Ольга", "Федоров Дмитрий"
+        ];
+
+        let currentPerson = "";
+        let currentCategory = "";
+
+        function init() {
+            const listContainer = document.getElementById("people-list");
+            listContainer.innerHTML = "";
+            people.forEach(person => {
+                const btn = document.createElement("button");
+                btn.className = "list-item";
+                btn.innerText = person;
+                btn.onclick = () => {
+                    currentPerson = person;
+                    document.getElementById("current-person-title").innerText = person;
+                    showScreen('category');
+                };
+                listContainer.appendChild(btn);
+            });
+        }
+
+        function showScreen(screenName) {
+            document.getElementById("screen-main").classList.add("hidden");
+            document.getElementById("screen-category").classList.add("hidden");
+            document.getElementById("screen-attendance").classList.add("hidden");
+            document.getElementById("screen-event").classList.add("hidden");
+            document.getElementById("screen-table").classList.add("hidden");
+
+            if(screenName === 'main') document.getElementById("screen-main").classList.remove("hidden");
+            if(screenName === 'category') document.getElementById("screen-category").classList.remove("hidden");
+            if(screenName === 'attendance') document.getElementById("screen-attendance").classList.remove("hidden");
+            if(screenName === 'event') document.getElementById("screen-event").classList.remove("hidden");
+            if(screenName === 'table') {
+                document.getElementById("screen-table").classList.remove("hidden");
+                loadTableFromGoogle();
+            }
+        }
+
+        function selectCategory(category) {
+            currentCategory = category;
+            if (category === 'Обед' || category === 'Молебен') {
+                document.getElementById("attendance-title").innerText = `${currentPerson} — ${category}`;
+                document.querySelector('input[name="status"][value="Был"]').checked = true;
+                toggleReason(false);
+                document.getElementById("absence-reason").value = "";
+                showScreen('attendance');
+            } else if (category === 'Мероприятие') {
+                document.getElementById("event-title").innerText = `${currentPerson} — Мероприятие`;
+                document.getElementById("event-name").value = "";
+                document.getElementById("event-role").value = "";
+                showScreen('event');
+            }
+        }
+
+        function toggleReason(show) {
+            const block = document.getElementById("reason-block");
+            if (show) block.classList.remove("hidden");
+            else block.classList.add("hidden");
+        }
+
+        function sendToGoogle(payload, loaderId, btnId) {
+            document.getElementById(loaderId).classList.remove("hidden");
+            document.getElementById(btnId).disabled = true;
+
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                alert("Данные успешно сохранены!");
+                document.getElementById(loaderId).classList.add("hidden");
+                document.getElementById(btnId).disabled = false;
+                showScreen('main');
+            })
+            .catch(err => {
+                alert("Ошибка при сохранении: " + err);
+                document.getElementById(loaderId).classList.add("hidden");
+                document.getElementById(btnId).disabled = false;
+            });
+        }
+
+        function saveAttendance() {
+            const status = document.querySelector('input[name="status"]:checked').value;
+            const reason = status === "Не был" ? document.getElementById("absence-reason").value : "-";
+            const timestamp = new Date().toLocaleString("ru-RU");
+
+            sendToGoogle({ 
+                timestamp, 
+                name: currentPerson, 
+                type: currentCategory, 
+                val1: status, 
+                val2: reason 
+            }, "auth-loader-1", "save-btn-1");
+        }
+
+        function saveEvent() {
+            const name = document.getElementById("event-name").value.trim();
+            const role = document.getElementById("event-role").value.trim();
+            if(!name) { 
+                alert("Введите название мероприятия!"); 
+                return; 
+            }
+            const timestamp = new Date().toLocaleString("ru-RU");
+            sendToGoogle({ 
+                timestamp, 
+                name: currentPerson, 
+                type: currentCategory, 
+                val1: name, 
+                val2: role || "-" 
+            }, "auth-loader-2", "save-btn-2");
+        }
+
+        function loadTableFromGoogle() {
+            const tbody = document.getElementById("table-body");
+            const loader = document.getElementById("table-loader");
+            tbody.innerHTML = "";
+            loader.classList.remove("hidden");
+            
+            fetch(WEB_APP_URL)
+                .then(res => res.json())
+                .then(data => {
+                    loader.classList.add("hidden");
+                    if(!data || data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Данных в таблице пока нет</td></tr>';
+                        return;
+                    }
+                    data.reverse().forEach(item => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td>${item.timestamp}</td>
+                            <td><b>${item.name}</b></td>
+                            <td>${item.type}</td>
+                            <td>${item.val1}</td>
+                            <td>${item.val2}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    loader.classList.add("hidden");
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Ошибка загрузки: ${err}</td></tr>`;
+                });
+        }
+
+        init();
+    </script>
+</body>
+</html>
