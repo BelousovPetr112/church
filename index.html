@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет посещаемости духовенства</title>
+    <title>Учет посещаемости</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; background: #f4f4f9; color: #333; }
         h1, h2 { text-align: center; color: #4a4a4a; }
         button { cursor: pointer; padding: 12px 18px; margin: 5px; border: none; border-radius: 4px; background: #3498db; color: white; font-size: 15px; }
         button:hover { background: #2980b9; }
         button:disabled { background: #95a5a6; cursor: not-allowed; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .list-item { display: block; width: 100%; text-align: left; background: #fff; color: #333; border: 1px solid #ccc; font-size: 16px; margin-bottom: 8px; font-weight: bold; }
         .list-item:hover { background: #eaeaea; }
@@ -38,7 +38,7 @@
 
     <!-- Главная страница -->
     <div id="screen-main" class="card">
-        <h1>Список духовенства</h1>
+        <h1 id="main-title">Список духовенства</h1>
         <div id="people-list"></div>
         <button class="view-btn" onclick="showScreen('table')">📊 Посмотреть общую таблицу данных</button>
     </div>
@@ -111,7 +111,7 @@
                         <th>Тип</th>
                         <th>Статус / Кол-во</th>
                         <th>Причина / Роль</th>
-                        <th>Действие</th>
+                        <th class="admin-only">Действие</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -121,9 +121,12 @@
 
     <script>
         // !!! ВСТАВЬТЕ ССЫЛКУ НА ВАШ GOOGLE APPS SCRIPT МЕЖДУ КАВЫЧКАМИ !!!
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx2c1yoKl7NGR4g65eoJ64C8qaaieK-GdTAwowWUVtF0JvfUkszYEjE8PMyXlXfBk63/exec";
+        const WEB_APP_URL = "https://google.com";
 
-        // Актуальный список духовенства
+        // Проверяем, админ зашел или обычный пользователь
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdmin = urlParams.get('admin') === 'true';
+
         const people = [
             "Игумен ПАВЕЛ (Полуков)",
             "Архимандрит СИЛУАН (Пасенко)",
@@ -145,6 +148,15 @@
         let currentCategory = "";
 
         function init() {
+            // Если зашел обычный пользователь, сразу перенаправляем его на таблицу просмотра
+            if (!isAdmin) {
+                document.querySelectorAll('.back-btn').forEach(el => el.classList.add('hidden'));
+                document.getElementById('main-title').innerText = "Архив посещаемости (Просмотр)";
+                showScreen('table');
+            } else {
+                showScreen('main');
+            }
+
             const listContainer = document.getElementById("people-list");
             listContainer.innerHTML = "";
             people.forEach(person => {
@@ -168,11 +180,11 @@
             document.getElementById("screen-event").classList.add("hidden");
             document.getElementById("screen-table").classList.add("hidden");
 
-            if(screenName === 'main') document.getElementById("screen-main").classList.remove("hidden");
-            if(screenName === 'category') document.getElementById("screen-category").classList.remove("hidden");
-            if(screenName === 'attendance') document.getElementById("screen-attendance").classList.remove("hidden");
-            if(screenName === 'treby') document.getElementById("screen-treby").classList.remove("hidden");
-            if(screenName === 'event') document.getElementById("screen-event").classList.remove("hidden");
+            if(screenName === 'main' && isAdmin) document.getElementById("screen-main").classList.remove("hidden");
+            if(screenName === 'category' && isAdmin) document.getElementById("screen-category").classList.remove("hidden");
+            if(screenName === 'attendance' && isAdmin) document.getElementById("screen-attendance").classList.remove("hidden");
+            if(screenName === 'treby' && isAdmin) document.getElementById("screen-treby").classList.remove("hidden");
+            if(screenName === 'event' && isAdmin) document.getElementById("screen-event").classList.remove("hidden");
             if(screenName === 'table') {
                 document.getElementById("screen-table").classList.remove("hidden");
                 loadTableFromGoogle();
@@ -282,6 +294,11 @@
             tbody.innerHTML = "";
             loader.classList.remove("hidden");
             
+            // Скрываем заголовок столбца действий, если не админ
+            if (!isAdmin) {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            }
+            
             fetch(WEB_APP_URL)
                 .then(res => res.json())
                 .then(data => {
@@ -292,13 +309,14 @@
                     }
                     data.reverse().forEach(item => {
                         const tr = document.createElement("tr");
+                        const deleteButton = isAdmin ? `<button class="delete-btn" onclick="deleteRow('${item.rowId}')">❌ Удалить</button>` : '';
                         tr.innerHTML = `
-                            <tr>${item.timestamp}</td>
+                            <td>${item.timestamp}</td>
                             <td><b>${item.name}</b></td>
                             <td>${item.type}</td>
                             <td>${item.val1}</td>
                             <td>${item.val2}</td>
-                            <td><button class="delete-btn" onclick="deleteRow('${item.rowId}')">❌ Удалить</button></td>
+                            <td class="${isAdmin ? '' : 'hidden'}">${deleteButton}</td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -310,10 +328,10 @@
         }
 
         function deleteRow(rowId) {
+            if(!isAdmin) return;
             if(confirm("Вы точно хотите удалить эту запись из Google Таблицы?")) {
                 const loader = document.getElementById("table-loader");
                 loader.classList.remove("hidden");
-                
                 fetch(WEB_APP_URL, {
                     method: "POST",
                     mode: "no-cors",
@@ -321,11 +339,8 @@
                     body: JSON.stringify({ action: "delete", rowId: rowId })
                 })
                 .then(() => {
-                    alert("Запрос на удаление отправлен! Таблица обновится через несколько секунд.");
-                    // Небольшая задержка перед обновлением, чтобы Google успел удалить строку
-                    setTimeout(() => {
-                        loadTableFromGoogle();
-                    }, 2000);
+                    alert("Запрос на удаление отправлен! Таблица обновится через пару секунд.");
+                    setTimeout(() => { loadTableFromGoogle(); }, 2000);
                 })
                 .catch(err => {
                     alert("Ошибка при удалении: " + err);
@@ -333,7 +348,6 @@
                 });
             }
         }
-
 
         init();
     </script>
