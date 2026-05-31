@@ -313,17 +313,27 @@
             if(confirm("Вы точно хотите удалить эту запись из Google Таблицы?")) {
                 const loader = document.getElementById("table-loader");
                 loader.classList.remove("hidden");
-                fetch(`${WEB_APP_URL}?rowId=${rowId}`, { method: "DELETE" })
-                    .then(() => {
-                        alert("Запись успешно удалена!");
+                
+                fetch(WEB_APP_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "delete", rowId: rowId })
+                })
+                .then(() => {
+                    alert("Запрос на удаление отправлен! Таблица обновится через несколько секунд.");
+                    // Небольшая задержка перед обновлением, чтобы Google успел удалить строку
+                    setTimeout(() => {
                         loadTableFromGoogle();
-                    })
-                    .catch(err => {
-                        alert("Ошибка при удалении: " + err);
-                        loader.classList.add("hidden");
-                    });
+                    }, 2000);
+                })
+                .catch(err => {
+                    alert("Ошибка при удалении: " + err);
+                    loadTableFromGoogle();
+                });
             }
         }
+
 
         init();
     </script>
