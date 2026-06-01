@@ -151,7 +151,7 @@
 
     <script>
         // !!! ВСТАВЬТЕ ССЫЛКУ НА ВАШ GOOGLE APPS SCRIPT МЕЖДУ КАВЫЧКАМИ !!!
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx2c1yoKl7NGR4g65eoJ64C8qaaieK-GdTAwowWUVtF0JvfUkszYEjE8PMyXlXfBk63/exec";
+        const WEB_APP_URL = "https://google.com";
 
         const urlParams = new URLSearchParams(window.location.search);
         const isAdmin = urlParams.get('admin') === 'true';
@@ -248,15 +248,38 @@
             else block.classList.add("hidden");
         }
 
+        // Универсальная функция красивого форматирования даты без букв T и Z
         function formatDate(dateStr) {
             try {
-                if(!dateStr) return "-";
-                if(dateStr.includes('.')) return dateStr.split(',')[0];
-                const d = new Date(dateStr);
-                if(isNaN(d.getTime())) return dateStr;
+                if (!dateStr) return "-";
+                let s = String(dateStr);
+                // Если это старая текстовая дата с точками (например, 01.06.2026, 12:00)
+                if (s.includes('.')) {
+                    return s.split(',')[0].trim();
+                }
+                // Если это формат ISO (2026-06-01T...)
+                let d = new Date(s);
+                if (isNaN(d.getTime())) return s;
                 return d.toLocaleDateString("ru-RU");
-            } catch(e) {
-                return dateStr;
+            } catch (e) {
+                return String(dateStr);
+            }
+        }
+
+        // Безопасное превращение любой строки/ISO из таблицы в объект даты JavaScript
+        function parseToDateObject(dateStr) {
+            try {
+                let s = String(dateStr);
+                if (s.includes('.')) {
+                    let datePart = s.split(',')[0].trim();
+                    let parts = datePart.split('.');
+                    if (parts.length === 3) {
+                        return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    }
+                }
+                return new Date(s);
+            } catch (e) {
+                return null;
             }
         }
 
@@ -389,27 +412,13 @@
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
                     
-                const filtered = data.filter(item => {
-                    if (!item.name || item.name.trim() !== currentPerson.trim()) return false;
-                    
-                    let itemDate;
-                    const ts = String(item.timestamp);
-                    
-                    if (ts.includes('.')) {
-                        // Распознаем старый формат дат (дд.мм.гггг)
-                        const datePart = ts.split(',')[0].trim();
-                        const parts = datePart.split('.');
-                        if (parts.length === 3) {
-                            itemDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                        }
-                    } else {
-                        // Распознаем новый ISO формат дат
-                        itemDate = new Date(ts);
-                    }
-                    
-                    if (!itemDate || isNaN(itemDate.getTime())) return false;
-                    return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
-                });
+                    // Фильтрация с использованием новой безопасной функции разбора дат
+                    const filtered = data.filter(item => {
+                        if (!item.name || String(item.name).trim() !== currentPerson.trim()) return false;
+                        let itemDate = parseToDateObject(item.timestamp);
+                        if (!itemDate || isNaN(itemDate.getTime())) return false;
+                        return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+                    });
                     
                     if (filtered.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">В этом месяце записей по человеку нет</td></tr>';
@@ -439,7 +448,7 @@
                             if (item.val1 === 'Был') counters[item.type].был++;
                             if (item.val1 === 'Не был') counters[item.type].небыл++;
                         } else if (item.type === 'Требы') {
-                            counters["Требы"] += parseInt(item.val1) || 0;
+                            counters["Требы"] += (parseInt(item.val1) || 0);
                         } else if (item.type === 'Мероприятие') {
                             counters["Мероприятие"]++;
                         }
