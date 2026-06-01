@@ -108,7 +108,7 @@
         <button class="back-btn" onclick="showScreen('main')">⬅️ Назад на главную</button>
         <div id="table-loader" class="loader hidden">Загрузка актуальных данных из Google Sheets...</div>
         <div style="overflow-x: auto; margin-top: 15px;">
-            <tr>
+            <table>
                 <thead>
                     <tr>
                         <th>Дата</th>
@@ -129,9 +129,7 @@
         <h2 id="stats-person-title">Статистика</h2>
         <h3 id="stats-month-title" style="text-align:center; color:#7f8c8d; margin-top:-10px;"> за текущий месяц</h3>
         
-        <div id="stats-summary-block" class="stats-summary">
-            <!-- Сюда скрипт вставит подсчитанные итоги -->
-        </div>
+        <div id="stats-summary-block" class="stats-summary"></div>
 
         <button class="back-btn" onclick="showScreen('category')">⬅️ Назад к категориям</button>
         <div id="stats-loader" class="loader hidden">Загрузка статистики из Google Sheets...</div>
@@ -155,11 +153,9 @@
         // !!! ВСТАВЬТЕ ССЫЛКУ НА ВАШ GOOGLE APPS SCRIPT МЕЖДУ КАВЫЧКАМИ !!!
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx2c1yoKl7NGR4g65eoJ64C8qaaieK-GdTAwowWUVtF0JvfUkszYEjE8PMyXlXfBk63/exec";
 
-        // Проверяем, админ зашел или обычный пользователь
         const urlParams = new URLSearchParams(window.location.search);
         const isAdmin = urlParams.get('admin') === 'true';
 
-        // Исправленный список духовенства (с исправленной фамилией о. Никиты)
         const people = [
             "Игумен ПАВЕЛ (Полуков)",
             "Архимандрит СИЛУАН (Пасенко)",
@@ -252,13 +248,10 @@
             else block.classList.add("hidden");
         }
 
-        // Преобразование ISO даты в красивый русский формат
         function formatDate(dateStr) {
             try {
                 if(!dateStr) return "-";
-                // Если дата сохранена локально в формате "дд.мм.гггг, чч:мм:сс"
                 if(dateStr.includes('.')) return dateStr.split(',')[0];
-                // Если дата пришла в формате ISO (как на скриншоте)
                 const d = new Date(dateStr);
                 if(isNaN(d.getTime())) return dateStr;
                 return d.toLocaleDateString("ru-RU");
@@ -293,7 +286,7 @@
         function saveAttendance() {
             const status = document.querySelector('input[name="status"]:checked').value;
             const reason = status === "Не был" ? document.getElementById("absence-reason").value : "-";
-            const timestamp = new Date().toISOString(); // Сохраняем в едином ISO формате
+            const timestamp = new Date().toISOString();
             sendToGoogle({ 
                 timestamp, 
                 name: currentPerson, 
@@ -396,13 +389,10 @@
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
                     
-                    // Фильтруем данные: только этот человек и только текущий месяц текущего года
                     const filtered = data.filter(item => {
                         if (item.name !== currentPerson) return false;
-                        // Парсим дату записи
                         let itemDate;
                         if (item.timestamp && item.timestamp.includes('.')) {
-                            // Если дата в старом формате дд.мм.гггг
                             const parts = item.timestamp.split(',')[0].split('.');
                             itemDate = new Date(parts[2], parts[1] - 1, parts[0]);
                         } else {
@@ -417,7 +407,6 @@
                         return;
                     }
                     
-                    // Переменные для подсчета итогов
                     let counters = {
                         "Обед": { был: 0, небыл: 0 },
                         "Молебен": { был: 0, небыл: 0 },
@@ -426,7 +415,6 @@
                         "Мероприятие": 0
                     };
                     
-                    // Выводим строки и считаем статистику (новые записи сверху)
                     filtered.reverse().forEach(item => {
                         const tr = document.createElement("tr");
                         tr.innerHTML = `
@@ -437,7 +425,6 @@
                         `;
                         tbody.appendChild(tr);
                         
-                        // Считаем итоги
                         if (item.type === 'Обед' || item.type === 'Молебен' || item.type === 'Служба') {
                             if (item.val1 === 'Был') counters[item.type].был++;
                             if (item.val1 === 'Не был') counters[item.type].небыл++;
@@ -448,7 +435,6 @@
                         }
                     });
                     
-                    // Выводим текстовый блок с итогами
                     summaryBlock.innerHTML = `
                         <b>📊 Общие итоги за текущий месяц:</b><br>
                         🍽️ <b>Обеды:</b> был: ${counters["Обед"].был} | не был: ${counters["Обед"].небыл}<br>
