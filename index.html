@@ -389,17 +389,27 @@
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
                     
-                    const filtered = data.filter(item => {
-                        if (item.name !== currentPerson) return false;
-                        let itemDate;
-                        if (item.timestamp && item.timestamp.includes('.')) {
-                            const parts = item.timestamp.split(',')[0].split('.');
-                            itemDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                        } else {
-                            itemDate = new Date(item.timestamp);
+                const filtered = data.filter(item => {
+                    if (!item.name || item.name.trim() !== currentPerson.trim()) return false;
+                    
+                    let itemDate;
+                    const ts = String(item.timestamp);
+                    
+                    if (ts.includes('.')) {
+                        // Распознаем старый формат дат (дд.мм.гггг)
+                        const datePart = ts.split(',')[0].trim();
+                        const parts = datePart.split('.');
+                        if (parts.length === 3) {
+                            itemDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                         }
-                        return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
-                    });
+                    } else {
+                        // Распознаем новый ISO формат дат
+                        itemDate = new Date(ts);
+                    }
+                    
+                    if (!itemDate || isNaN(itemDate.getTime())) return false;
+                    return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+                });
                     
                     if (filtered.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">В этом месяце записей по человеку нет</td></tr>';
