@@ -35,6 +35,7 @@
         .cat-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media(min-width: 480px) { .cat-grid { grid-template-columns: 1fr 1fr; } }
         .stats-summary { background: #fcf8e3; border: 1px solid #faebcc; padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 15px; line-height: 1.5; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -53,8 +54,9 @@
             <button onclick="selectCategory('Обед')">🍽️ Отметить обед</button>
             <button onclick="selectCategory('Молебен')">⛪ Отметить молебен</button>
             <button onclick="selectCategory('Служба')">🛡️ Отметить службу</button>
-            <button onclick="selectCategory('Требы')">📜 Ввести требы за неделю</button>
+            <button onclick="selectCategory('Требы')">📜 Совершение требы/таинства</button>
             <button onclick="selectCategory('Мероприятие')">🎉 Участие в мероприятии</button>
+            <button onclick="selectCategory('Отпуск')">🧳 Отпуск / Отъезд</button>
         </div>
         <br>
         <button class="stats-btn" style="width: 100%; font-weight: bold;" onclick="showPersonStats()">📈 Статистика за текущий месяц</button>
@@ -66,25 +68,29 @@
     <div id="screen-attendance" class="card hidden">
         <h2 id="attendance-title"></h2>
         <div class="radio-group">
-            <label><input type="radio" name="status" value="Был" checked onclick="toggleReason(false)"> Был</label>
-            <label><input type="radio" name="status" value="Не был" onclick="toggleReason(true)"> Не был</label>
+            <label><input type="radio" name="status" value="Был" checked> Был</label>
+            <label><input type="radio" name="status" value="Не был"> Не был</label>
         </div>
-        <div id="reason-block" class="hidden">
-            <label>Укажите причину отсутствия:</label>
-            <input type="text" id="absence-reason" placeholder="Например: болен, командировка">
-        </div>
+        <label>Комментарий / Причина отсутствия:</label>
+        <input type="text" id="absence-reason" placeholder="Например: болен, командировка или доп. примечание">
+        
         <div id="auth-loader-1" class="loader hidden">Сохранение в облако... подождите</div>
         <button id="save-btn-1" class="save-btn" onclick="saveAttendance()">💾 Сохранить</button>
         <button class="back-btn" onclick="showScreen('category')">Отмена</button>
     </div>
 
-    <!-- Ввод Треб -->
+    <!-- Ввод Треб и Таинств -->
     <div id="screen-treby" class="card hidden">
         <h2 id="treby-title"></h2>
-        <label>Количество треб за неделю:</label>
-        <input type="number" id="treby-count" min="0" placeholder="Введите число, например: 5">
-        <label>Дополнительный комментарий (необязательно):</label>
-        <input type="text" id="treby-comment" placeholder="Особенности или примечания">
+        <div class="radio-group">
+            <label><input type="radio" name="treby-type" value="Треба" checked> Треба</label>
+            <label><input type="radio" name="treby-type" value="Таинство"> Таинство</label>
+        </div>
+        <label>Количество:</label>
+        <input type="number" id="treby-count" min="1" value="1">
+        <label>Название требы / таинства (Комментарий):</label>
+        <input type="text" id="treby-comment" placeholder="Например: Крещение, Венчание, Панихида">
+        
         <div id="auth-loader-3" class="loader hidden">Сохранение в облако... подождите</div>
         <button id="save-btn-3" class="save-btn" onclick="saveTreby()">💾 Сохранить</button>
         <button class="back-btn" onclick="showScreen('category')">Отмена</button>
@@ -94,11 +100,27 @@
     <div id="screen-event" class="card hidden">
         <h2 id="event-title"></h2>
         <label>Название мероприятия:</label>
-        <input type="text" id="event-name" placeholder="Например: Субботник">
-        <label>Что там делал:</label>
-        <input type="text" id="event-role" placeholder="Например: сослужил, помогал">
+        <input type="text" id="event-name" placeholder="Например: Субботник, Собрание">
+        <label>Что там делал / Роль (Комментарий):</label>
+        <input type="text" id="event-role" placeholder="Например: сослужил, помогал, выступал">
+        
         <div id="auth-loader-2" class="loader hidden">Сохранение в облако... подождите</div>
         <button id="save-btn-2" class="save-btn" onclick="saveEvent()">💾 Сохранить</button>
+        <button class="back-btn" onclick="showScreen('category')">Отмена</button>
+    </div>
+
+    <!-- Отпуск / Отъезд -->
+    <div id="screen-vacation" class="card hidden">
+        <h2 id="vacation-title"></h2>
+        <div class="radio-group">
+            <label><input type="radio" name="vacation-status" value="Отпуск" checked> Отпуск</label>
+            <label><input type="radio" name="vacation-status" value="Отъезд"> Отъезд</label>
+        </div>
+        <label>Комментарий к поездке:</label>
+        <input type="text" id="vacation-comment" placeholder="Например: С 1 по 15 число, санаторий, паломничество">
+        
+        <div id="auth-loader-4" class="loader hidden">Сохранение в облако... подождите</div>
+        <button id="save-btn-4" class="save-btn" onclick="saveVacation()">💾 Сохранить</button>
         <button class="back-btn" onclick="showScreen('category')">Отмена</button>
     </div>
 
@@ -115,7 +137,7 @@
                         <th>Имя</th>
                         <th>Тип</th>
                         <th>Статус / Кол-во</th>
-                        <th>Причина / Роль</th>
+                        <th>Причина / Название / Коммент.</th>
                         <th class="admin-only">Действие</th>
                     </tr>
                 </thead>
@@ -124,7 +146,7 @@
         </div>
     </div>
 
-    <!-- Экран статистики отдельного человека -->
+    <!-- Экран статистики -->
     <div id="screen-stats" class="card hidden">
         <h2 id="stats-person-title">Статистика</h2>
         <h3 id="stats-month-title" style="text-align:center; color:#7f8c8d; margin-top:-10px;"> за текущий месяц</h3>
@@ -141,7 +163,7 @@
                         <th>Дата</th>
                         <th>Тип</th>
                         <th>Статус / Кол-во</th>
-                        <th>Причина / Роль</th>
+                        <th>Причина / Название / Коммент.</th>
                     </tr>
                 </thead>
                 <tbody id="stats-table-body"></tbody>
@@ -206,6 +228,7 @@
             document.getElementById("screen-attendance").classList.add("hidden");
             document.getElementById("screen-treby").classList.add("hidden");
             document.getElementById("screen-event").classList.add("hidden");
+            document.getElementById("screen-vacation").classList.add("hidden");
             document.getElementById("screen-table").classList.add("hidden");
             document.getElementById("screen-stats").classList.add("hidden");
 
@@ -214,6 +237,7 @@
             if(screenName === 'attendance' && isAdmin) document.getElementById("screen-attendance").classList.remove("hidden");
             if(screenName === 'treby' && isAdmin) document.getElementById("screen-treby").classList.remove("hidden");
             if(screenName === 'event' && isAdmin) document.getElementById("screen-event").classList.remove("hidden");
+            if(screenName === 'vacation' && isAdmin) document.getElementById("screen-vacation").classList.remove("hidden");
             if(screenName === 'table') {
                 document.getElementById("screen-table").classList.remove("hidden");
                 loadTableFromGoogle();
@@ -226,12 +250,12 @@
             if (category === 'Обед' || category === 'Молебен' || category === 'Служба') {
                 document.getElementById("attendance-title").innerText = `${currentPerson} — ${category}`;
                 document.querySelector('input[name="status"][value="Был"]').checked = true;
-                toggleReason(false);
                 document.getElementById("absence-reason").value = "";
                 showScreen('attendance');
             } else if (category === 'Требы') {
-                document.getElementById("treby-title").innerText = `${currentPerson} — Требы`;
-                document.getElementById("treby-count").value = "";
+                document.getElementById("treby-title").innerText = `${currentPerson} — Требы / Таинства`;
+                document.querySelector('input[name="treby-type"][value="Треба"]').checked = true;
+                document.getElementById("treby-count").value = "1";
                 document.getElementById("treby-comment").value = "";
                 showScreen('treby');
             } else if (category === 'Мероприятие') {
@@ -239,25 +263,21 @@
                 document.getElementById("event-name").value = "";
                 document.getElementById("event-role").value = "";
                 showScreen('event');
+            } else if (category === 'Отпуск') {
+                document.getElementById("vacation-title").innerText = `${currentPerson} — Отпуск / Отъезд`;
+                document.querySelector('input[name="vacation-status"][value="Отпуск"]').checked = true;
+                document.getElementById("vacation-comment").value = "";
+                showScreen('vacation');
             }
         }
 
-        function toggleReason(show) {
-            const block = document.getElementById("reason-block");
-            if (show) block.classList.remove("hidden");
-            else block.classList.add("hidden");
-        }
-
-        // Универсальная функция красивого форматирования даты без букв T и Z
         function formatDate(dateStr) {
             try {
                 if (!dateStr) return "-";
                 let s = String(dateStr);
-                // Если это старая текстовая дата с точками (например, 01.06.2026, 12:00)
                 if (s.includes('.')) {
                     return s.split(',')[0].trim();
                 }
-                // Если это формат ISO (2026-06-01T...)
                 let d = new Date(s);
                 if (isNaN(d.getTime())) return s;
                 return d.toLocaleDateString("ru-RU");
@@ -266,7 +286,6 @@
             }
         }
 
-        // Безопасное превращение любой строки/ISO из таблицы в объект даты JavaScript
         function parseToDateObject(dateStr) {
             try {
                 let s = String(dateStr);
@@ -308,37 +327,42 @@
 
         function saveAttendance() {
             const status = document.querySelector('input[name="status"]:checked').value;
-            const reason = status === "Не был" ? document.getElementById("absence-reason").value : "-";
+            const comment = document.getElementById("absence-reason").value.trim() || "-";
             const timestamp = new Date().toISOString();
             sendToGoogle({ 
                 timestamp, 
                 name: currentPerson, 
                 type: currentCategory, 
                 val1: status, 
-                val2: reason 
+                val2: comment 
             }, "auth-loader-1", "save-btn-1");
         }
 
         function saveTreby() {
+            const type = document.querySelector('input[name="treby-type"]:checked').value;
             const count = document.getElementById("treby-count").value;
             const comment = document.getElementById("treby-comment").value.trim();
-            if(!count) { 
-                alert("Укажите число треб!"); 
+            if(!count || count < 1) { 
+                alert("Укажите корректное число!"); 
+                return; 
+            }
+            if(!comment) { 
+                alert("Введите название!"); 
                 return; 
             }
             const timestamp = new Date().toISOString();
             sendToGoogle({ 
                 timestamp, 
                 name: currentPerson, 
-                type: currentCategory, 
-                val1: count, 
-                val2: comment || "-" 
+                type: type, 
+                val1: count + " шт.", 
+                val2: comment 
             }, "auth-loader-3", "save-btn-3");
         }
 
         function saveEvent() {
             const name = document.getElementById("event-name").value.trim();
-            const role = document.getElementById("event-role").value.trim();
+            const role = document.getElementById("event-role").value.trim() || "-";
             if(!name) { 
                 alert("Введите название мероприятия!"); 
                 return; 
@@ -349,8 +373,21 @@
                 name: currentPerson, 
                 type: currentCategory, 
                 val1: name, 
-                val2: role || "-" 
+                val2: role 
             }, "auth-loader-2", "save-btn-2");
+        }
+
+        function saveVacation() {
+            const status = document.querySelector('input[name="vacation-status"]:checked').value;
+            const comment = document.getElementById("vacation-comment").value.trim() || "-";
+            const timestamp = new Date().toISOString();
+            sendToGoogle({ 
+                timestamp, 
+                name: currentPerson, 
+                type: "Отпуск/Отъезд", 
+                val1: status, 
+                val2: comment 
+            }, "auth-loader-4", "save-btn-4");
         }
 
         function loadTableFromGoogle() {
@@ -412,7 +449,6 @@
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
                     
-                    // Фильтрация с использованием новой безопасной функции разбора дат
                     const filtered = data.filter(item => {
                         if (!item.name || String(item.name).trim() !== currentPerson.trim()) return false;
                         let itemDate = parseToDateObject(item.timestamp);
@@ -430,8 +466,10 @@
                         "Обед": { был: 0, небыл: 0 },
                         "Молебен": { был: 0, небыл: 0 },
                         "Служба": { был: 0, небыл: 0 },
-                        "Требы": 0,
-                        "Мероприятие": 0
+                        "Треба": 0,
+                        "Таинство": 0,
+                        "Мероприятие": 0,
+                        "Отпуск": 0
                     };
                     
                     filtered.reverse().forEach(item => {
@@ -447,10 +485,13 @@
                         if (item.type === 'Обед' || item.type === 'Молебен' || item.type === 'Служба') {
                             if (item.val1 === 'Был') counters[item.type].был++;
                             if (item.val1 === 'Не был') counters[item.type].небыл++;
-                        } else if (item.type === 'Требы') {
-                            counters["Требы"] += (parseInt(item.val1) || 0);
+                        } else if (item.type === 'Треба' || item.type === 'Таинство') {
+                            const num = parseInt(item.val1) || 0;
+                            counters[item.type] += num;
                         } else if (item.type === 'Мероприятие') {
                             counters["Мероприятие"]++;
+                        } else if (item.type === 'Отпуск/Отъезд') {
+                            counters["Отпуск"]++;
                         }
                     });
                     
@@ -459,8 +500,9 @@
                         🍽️ <b>Обеды:</b> был: ${counters["Обед"].был} | не был: ${counters["Обед"].небыл}<br>
                         ⛪ <b>Молебны:</b> был: ${counters["Молебен"].был} | не был: ${counters["Молебен"].небыл}<br>
                         🛡️ <b>Службы:</b> был: ${counters["Служба"].был} | не был: ${counters["Служба"].небыл}<br>
-                        📜 <b>Всего треб выполнено:</b> ${counters["Требы"]} шт.<br>
-                        🎉 <b>Посещено мероприятий:</b> ${counters["Мероприятие"]}
+                        📜 <b>Выполнено треб:</b> ${counters["Треба"]} шт. | <b>таинств:</b> ${counters["Таинство"]} шт.<br>
+                        🎉 <b>Посещено мероприятий:</b> ${counters["Мероприятие"]}<br>
+                        🧳 <b>Записей об отпуске/отъезде:</b> ${counters["Отпуск"]}
                     `;
                 })
                 .catch(err => {
